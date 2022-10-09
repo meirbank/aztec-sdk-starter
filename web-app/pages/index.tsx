@@ -152,7 +152,7 @@ const Home: NextPage = () => {
   async function mint(){
 
 
-    const nftBridge = new BridgeCallData(23, 0, virtualAssetIdPlaceholder, undefined, undefined, 0);
+    const nftBridge = new BridgeCallData(32, 0, virtualAssetIdPlaceholder, undefined, undefined, 0);
 
     let bridge = nftBridge;
 
@@ -243,7 +243,7 @@ const Home: NextPage = () => {
 
   async function mapVirtualAssetToNFT(){
     const id = virtualAssetId;
-    const bridgeAddress = "0x198d15fac127ab427f0db5f51aba3a3a1007c789";
+    const bridgeAddress = "0xa6c8113388ef842b2aca1d3ce41ecccbb4a35e2a";
     const bridgeContract = new ethers.Contract(bridgeAddress, bridgeReadAbi, signer);
     const nftId = await bridgeContract.owners(virtualAssetId);
     console.log("NFT id", nftId.toNumber());
