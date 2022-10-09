@@ -27,6 +27,28 @@ import {
   registerAccount,
 } from "./utils";
 
+const bridgeReadAbi = [
+  {
+            "inputs": [
+              {
+                "internalType": "uint256",
+                "name": "",
+                "type": "uint256"
+              }
+            ],
+            "stateMutability": "view",
+            "type": "function",
+            "name": "owners",
+            "outputs": [
+              {
+                "internalType": "uint256",
+                "name": "",
+                "type": "uint256"
+              }
+            ]
+          }
+  ];
+
 const Home: NextPage = () => {
   const [isConnected, setIsConnected] = useState(false);
   const [connecting, setConnecting] = useState(false);
@@ -43,6 +65,7 @@ const Home: NextPage = () => {
   const [spendingSigner, setSpendingSigner] = useState<SchnorrSigner | undefined>(undefined);
   const [alias, setAlias] = useState("");
   const [amount, setAmount] = useState(0);
+  const [virtualAssetId, setVirtualAssetId] = useState(0);
 
   useEffect(() => {
     if (typeof window.ethereum !== "undefined") {
@@ -161,6 +184,71 @@ const Home: NextPage = () => {
 
   }
 
+  async function getBalance(){
+
+    let balance = sdk.fromBaseUnits(
+      await sdk.getBalance(
+        accountPublicKey,
+        sdk.getAssetIdBySymbol("ETH")
+      )
+    );
+
+    let spendableAccountSum = sdk.fromBaseUnits({
+      assetId: 0,
+      value: await sdk.getSpendableSum(accountPublicKey, 0, false),
+    });
+
+    let spendableSpendingKeySum = sdk.fromBaseUnits({
+      assetId: 0,
+      value: await sdk.getSpendableSum(accountPublicKey, 0, true),
+    });
+
+    let pendingSpendingKeySum = sdk.fromBaseUnits({
+      assetId: 0,
+      value: await sdk.getSpendableSum(
+        accountPublicKey,
+        0,
+        true,
+        false
+      ),
+    });
+
+    const padding = 50;
+
+    console.log(`Total zkETH Balance:`.padEnd(padding, " "), balance);
+    console.log(
+      "Spendable base account zkETH Balance:".padEnd(padding, " "),
+      spendableAccountSum
+    );
+    console.log(
+      "Spendable registered account zkETH Balance:".padEnd(padding, " "),
+      spendableSpendingKeySum
+    );
+    console.log(
+      "Pending registered account zkETH Balance:".padEnd(padding, " "),
+      pendingSpendingKeySum
+    );
+
+    const defiTxs = await sdk.getDefiTxs(accountPublicKey);
+
+    console.log(defiTxs)
+
+    defiTxs.map(async (tx) => {
+      console.log(`Bridge Id: ${tx.bridgeCallData.bridgeAddressId}`)
+      const balance = await sdk.getBalance(accountPublicKey, tx.bridgeCallData.outputAssetIdA)
+      console.log(`Output asset id ${tx.bridgeCallData.outputAssetIdA} balance: ${balance.value}`)
+      setVirtualAssetId(tx.bridgeCallData.outputAssetIdA)
+    })
+  }
+
+  async function mapVirtualAssetToNFT(){
+    const id = virtualAssetId;
+    const bridgeAddress = "0x198d15fac127ab427f0db5f51aba3a3a1007c789";
+    const bridgeContract = new ethers.Contract(bridgeAddress, bridgeReadAbi, signer);
+    const nftId = await bridgeContract.owners(virtualAssetId);
+    console.log("NFT id", nftId.toNumber());
+  }
+
   async function getSpendingKey() {
     const { privateKey } = await sdk!.generateSpendingKeyPair(ethAccount!);
     const signer = await sdk?.createSchnorrSigner(privateKey);
@@ -240,9 +328,19 @@ const Home: NextPage = () => {
             ""
           )}
           {spendingSigner && account0 ? (
-            <button onClick={() => mint()}>
+            <><button onClick={() => mint()}>
             Mint
           </button>
+            <button onClick={() => getBalance()}>
+            Get Balance
+          </button></>
+          ) : (
+            ""
+          )}
+          {(spendingSigner && account0 && virtualAssetId) ? (
+            <button onClick={() => mapVirtualAssetToNFT()}>
+              retrieve NFT ID
+            </button>
           ) : (
             ""
           )}
