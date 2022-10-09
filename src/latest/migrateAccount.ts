@@ -23,6 +23,7 @@ import {
       newAccountPrivateKey,
       newSpendingPublicKey,
       recoveryPublicKey,
+      0,
       fee
     );
     await controller.createProof();

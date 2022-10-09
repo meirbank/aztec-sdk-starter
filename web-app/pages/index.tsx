@@ -5,6 +5,7 @@ import { useEffect, useState } from "react";
 import {
   AccountId,
   AztecSdk,
+  AssetValue,
   createAztecSdk,
   EthersAdapter,
   EthereumProvider,
@@ -14,6 +15,9 @@ import {
   SchnorrSigner,
   EthAddress,
   TxSettlementTime,
+  virtualAssetIdPlaceholder,
+  BridgeCallData,
+  DefiSettlementTime
 } from "@aztec/sdk";
 
 import { randomBytes } from "crypto";
@@ -106,6 +110,8 @@ const Home: NextPage = () => {
 
     setAccount0(account0!);
 
+    console.log(account0);
+
     if ((await sdk?.isAccountRegistered(accountPublicKey!)))
       setUserExists(true);
 
@@ -117,6 +123,42 @@ const Home: NextPage = () => {
         await sdk!.getBalance(account0.id, sdk!.getAssetIdBySymbol("ETH"))
       )
     );
+
+  }
+
+  async function mint(){
+
+
+    const nftBridge = new BridgeCallData(23, 0, virtualAssetIdPlaceholder, undefined, undefined, 0);
+
+    let bridge = nftBridge;
+
+    const tokenAssetValue: AssetValue = {
+      assetId: 0,
+      value: 1n,
+    };
+
+    const fee = (await sdk.getDefiFees(bridge))[DefiSettlementTime.INSTANT];
+    console.log("create defi controller",       accountPublicKey,
+    spendingSigner,
+    bridge,
+    tokenAssetValue,
+    fee)
+    console.log("signer", signer, spendingSigner)
+    const controller = sdk.createDefiController(
+      accountPublicKey,
+      spendingSigner,
+      bridge,
+      tokenAssetValue,
+      fee
+    );
+    await controller.createProof();
+    const txId = await controller.send();
+    console.log(
+      "View transaction on the block explorer",
+      `tx/${txId.toString()}`
+    );
+
   }
 
   async function getSpendingKey() {
@@ -185,12 +227,24 @@ const Home: NextPage = () => {
       {connecting ? "Please wait, setting up Aztec" : ""}
       {sdk ? (
         <div>
-          {accountPrivateKey ? (
+          {(accountPrivateKey && !account0)? (
             <button onClick={() => initUsersAndPrintBalances()}>
-              Init User / Log Balance
+              initialize
             </button>
           ) : (
+            ""
+          )}
+          {(!accountPrivateKey) ? (
             <button onClick={() => login()}>Login</button>
+          ) : (
+            ""
+          )}
+          {spendingSigner && account0 ? (
+            <button onClick={() => mint()}>
+            Mint
+          </button>
+          ) : (
+            ""
           )}
           {spendingSigner && !userExists ? (
             <form>
@@ -213,38 +267,6 @@ const Home: NextPage = () => {
           ) : (
             ""
           )}
-          {spendingSigner ? (
-            <div>
-              <form>
-                <label>
-                  Deposit Amount:
-                  <input
-                    type="number"
-                    step="0.000000000000000001"
-                    min="0.01"
-                    value={amount}
-                    onChange={(e) => setAmount(e.target.valueAsNumber)}
-                  />
-                  ETH
-                </label>
-              </form>
-              {!userExists ? (
-                <button onClick={() => registerNewAccount()}>
-                  Register Alias + Deposit ≥0.1 ETH
-                </button>
-              ) : (
-                ""
-              )}
-            </div>
-          ) : (
-            ""
-          )}
-          {spendingSigner && account0 ? (
-            <button onClick={() => depositEth()}>Deposit ETH</button>
-          ) : (
-            ""
-          )}
-          <button onClick={() => console.log("sdk", sdk)}>Log SDK</button>
         </div>
       ) : (
         ""
